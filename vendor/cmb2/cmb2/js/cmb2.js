@@ -19,9 +19,10 @@ window.CMB2 = window.CMB2 || {};
 	var $id = function( selector ) {
 		return $( document.getElementById( selector ) );
 	};
+	cmb.$id = $id;
 	var defaults = {
 		idNumber        : false,
-		repeatEls       : 'input:not([type="button"],[id^=filelist]),select,textarea,.cmb2-media-status',
+		repeatEls       : 'input:not([type="button"]),select,textarea,.cmb2-media-status',
 		noEmpty         : 'input:not([type="button"]):not([type="radio"]):not([type="checkbox"]),textarea',
 		repeatUpdate    : 'input:not([type="button"]),select,textarea,label',
 		styleBreakPoint : 450,
@@ -127,7 +128,9 @@ window.CMB2 = window.CMB2 || {};
 			// the post is currently being saved && we have tinymce editors
 			if ( editor && editor.isSavingPost && editor.isSavingPost() && window.tinyMCE.editors.length ) {
 				for ( var i = 0; i < window.tinyMCE.editors.length; i++ ) {
-					window.tinyMCE.editors[i].save();
+					if ( window.tinyMCE.activeEditor !== window.tinyMCE.editors[i] ) {
+						window.tinyMCE.editors[i].save();
+					}
 				}
 			}
 		});
@@ -183,23 +186,29 @@ window.CMB2 = window.CMB2 || {};
 			return;
 		}
 
-		// Loop repeatable group tables
-		$( '.cmb-repeatable-group.repeatable' ).each( function() {
-			var $table = $( this );
-			var groupTitle = $table.find( '.cmb-add-group-row' ).data( 'grouptitle' );
+		var $table = $( evt.target );
+		var groupTitle = $table.find( '.cmb-add-group-row' ).data( 'grouptitle' );
 
-			// Loop repeatable group table rows
-			$table.find( '.cmb-repeatable-grouping' ).each( function( rowindex ) {
-				var $row = $( this );
-				var $rowTitle = $row.find( 'h3.cmb-group-title' );
-				// Reset rows iterator
-				$row.data( 'iterator', rowindex );
-				// Reset rows title
-				if ( $rowTitle.length ) {
-					$rowTitle.text( groupTitle.replace( '{#}', ( rowindex + 1 ) ) );
-				}
-			});
+		// Loop repeatable group table rows
+		$table.find( '.cmb-repeatable-grouping' ).each( function( rowindex ) {
+			var $row = $( this );
+
+			// Reset rows iterator
+			$row.attr( 'data-iterator', rowindex ).data( 'iterator', rowindex );
+
+			cmb.resetGroupTitles( $row, rowindex, groupTitle );
 		});
+	};
+
+	cmb.resetGroupTitles = function( $row, newIterator, groupTitle ) {
+		if ( groupTitle ) {
+			var $rowTitle = $row.find( 'h3.cmb-group-title' );
+
+			// Reset rows title
+			if ( $rowTitle.length ) {
+				$rowTitle.text( groupTitle.replace( '{#}', parseInt( newIterator, 10 ) + 1 ) );
+			}
+		}
 	};
 
 	cmb.toggleHandle = function( evt ) {
@@ -505,9 +514,7 @@ window.CMB2 = window.CMB2 || {};
 		$elements.filter( ':selected' ).removeAttr( 'selected' );
 		$elements.find( ':selected' ).removeAttr( 'selected', false );
 
-		if ( $row.find('h3.cmb-group-title').length ) {
-			$row.find( 'h3.cmb-group-title' ).text( $row.data( 'title' ).replace( '{#}', ( cmb.idNumber + 1 ) ) );
-		}
+		cmb.resetGroupTitles( $row, cmb.idNumber, $row.data( 'title' ) );
 
 		$elements.each( function() {
 			cmb.elReplacements( $( this ), prevNum, group );
@@ -558,7 +565,7 @@ window.CMB2 = window.CMB2 || {};
 			$newInput.html( newVal );
 		}
 
-		if ( 'SELECT' === tagName && undefined !== typeof defVal ) {
+		if ( 'SELECT' === tagName && 'undefined' !== typeof defVal ) {
 			var $toSelect = $newInput.find( '[value="'+ defVal + '"]' );
 			if ( $toSelect.length ) {
 				$toSelect.attr( 'selected', 'selected' ).prop( 'selected', 'selected' );
@@ -567,7 +574,7 @@ window.CMB2 = window.CMB2 || {};
 
 		if ( checkable ) {
 			$newInput.removeAttr( 'checked' );
-			if ( undefined !== typeof defVal && oldVal === defVal ) {
+			if ( 'undefined' !== typeof defVal && oldVal === defVal ) {
 				$newInput.attr( 'checked', 'checked' ).prop( 'checked', 'checked' );
 			}
 		}
@@ -608,20 +615,20 @@ window.CMB2 = window.CMB2 || {};
 		cmb.initPickers( $row.find('input[type="text"].cmb2-timepicker'), $row.find('input[type="text"].cmb2-datepicker'), $row.find('input[type="text"].cmb2-colorpicker') );
 	};
 
-	cmb.updateNameAttr = function () {
-		var $this = $( this );
-		var name  = $this.attr( 'name' ); // get current name
+	cmb.updateNameAttr = function ( $el, prevIterator, newIterator ) {
+		var name = $el.attr( 'name' ); // get current name
 
 		// If name is defined
-		if ( typeof name !== 'undefined' ) {
-			var prevNum = parseInt( $this.parents( '.cmb-repeatable-grouping' ).data( 'iterator' ), 10 );
-			var newNum  = prevNum - 1; // Subtract 1 to get new iterator number
+		if ( 'undefined' !== typeof name ) {
+			var isFileList = $el.attr( 'id' ).indexOf('filelist');
 
 			// Update field name attributes so data is not orphaned when a row is removed and post is saved
-			var $newName = name.replace( '[' + prevNum + ']', '[' + newNum + ']' );
+			var from    = isFileList ? '[' + prevIterator + '][' : '[' + prevIterator + ']';
+			var to      = isFileList ? '[' + newIterator + '][' : '[' + newIterator + ']';
+			var newName = name.replace( from, to );
 
 			// New name with replaced iterator
-			$this.attr( 'name', $newName );
+			$el.attr( 'name', newName );
 		}
 	};
 
@@ -653,6 +660,12 @@ window.CMB2 = window.CMB2 || {};
 		cmb.idNumber = parseInt( prevNum, 10 ) + 1;
 		var $row     = $oldRow.clone();
 		var nodeName = $row.prop('nodeName') || 'div';
+		var getRowId = function( id ) {
+			id = id.split('-');
+			id.splice(id.length - 1, 1);
+			id.push( cmb.idNumber );
+			return id.join('-');
+		};
 
 		// Make sure the next number doesn't exist.
 		while ( $table.find( '.cmb-repeatable-grouping[data-iterator="'+ cmb.idNumber +'"]' ).length > 0 ) {
@@ -662,40 +675,46 @@ window.CMB2 = window.CMB2 || {};
 		cmb.newRowHousekeeping( $row.data( 'title', $this.data( 'grouptitle' ) ) ).cleanRow( $row, prevNum, true );
 		$row.find( '.cmb-add-row-button' ).prop( 'disabled', false );
 
-		var $newRow = $( '<' + nodeName + ' class="postbox cmb-row cmb-repeatable-grouping" data-iterator="'+ cmb.idNumber +'">'+ $row.html() +'</' + nodeName + '>' );
+		var $newRow = $( '<' + nodeName + ' id="'+ getRowId( $oldRow.attr('id') ) +'" class="postbox cmb-row cmb-repeatable-grouping" data-iterator="'+ cmb.idNumber +'">'+ $row.html() +'</' + nodeName + '>' );
 		$oldRow.after( $newRow );
 
 		cmb.afterRowInsert( $newRow );
+		cmb.makeRepeatableSortable( $newRow );
 
 		cmb.triggerElement( $table, { type: 'cmb2_add_row', group: true }, $newRow );
-
 	};
 
 	cmb.addAjaxRow = function( evt ) {
 		evt.preventDefault();
 
-		var $this         = $( this );
-		var $table        = $id( $this.data('selector') );
-		var $emptyrow     = $table.find('.empty-row');
-		var prevNum       = parseInt( $emptyrow.find('[data-iterator]').data('iterator'), 10 );
-		cmb.idNumber      = parseInt( prevNum, 10 ) + 1;
-		var $row          = $emptyrow.clone();
+		var $this     = $( this );
+		var $table    = $id( $this.data('selector') );
+		var $row      = $table.find('.empty-row');
+		var prevNum   = parseInt( $row.find('[data-iterator]').data('iterator'), 10 );
+		cmb.idNumber  = parseInt( prevNum, 10 ) + 1;
+		var $emptyrow = $row.clone();
 
-		cmb.newRowHousekeeping( $row ).cleanRow( $row, prevNum );
+		cmb.newRowHousekeeping( $emptyrow ).cleanRow( $emptyrow, prevNum );
 
-		$emptyrow.removeClass('empty-row hidden').addClass('cmb-repeat-row');
-		$emptyrow.after( $row );
+		$row.removeClass('empty-row hidden').addClass('cmb-repeat-row');
+		$row.after( $emptyrow );
 
-		cmb.afterRowInsert( $row );
+		cmb.afterRowInsert( $emptyrow );
 
-		cmb.triggerElement( $table, { type: 'cmb2_add_row', group: false }, $row );
-
+		cmb.triggerElement( $table, { type: 'cmb2_add_row', group: false }, $emptyrow, $row );
 	};
 
 	cmb.removeGroupRow = function( evt ) {
 		evt.preventDefault();
 
-		var $this   = $( this );
+		var $this        = $( this );
+		var confirmation = $this.data('confirm');
+
+		// Process further only if deletion confirmation enabled and user agreed.
+		if ( ! cmb.resetRow.resetting && confirmation && ! window.confirm( confirmation ) ) {
+			return;
+		}
+
 		var $table  = $id( $this.data('selector') );
 		var $parent = $this.parents('.cmb-repeatable-grouping');
 		var number  = $table.find('.cmb-repeatable-grouping').length;
@@ -706,13 +725,18 @@ window.CMB2 = window.CMB2 || {};
 
 		cmb.triggerElement( $table, 'cmb2_remove_group_row_start', $this );
 
-		// when a group is removed loop through all next groups and update fields names
-		$parent.nextAll( '.cmb-repeatable-grouping' ).find( cmb.repeatEls ).each( cmb.updateNameAttr );
+		// When a group is removed, loop through all next groups and update fields names.
+		$parent.nextAll( '.cmb-repeatable-grouping' ).find( cmb.repeatEls ).each( function() {
+			var $el     = $( this );
+			var prevNum = parseInt( $el.parents( '.cmb-repeatable-grouping' ).data( 'iterator' ), 10 );
+			var newNum  = prevNum - 1; // Subtract 1 to get new iterator number
+
+			cmb.updateNameAttr( $el, prevNum, newNum );
+		} );
 
 		$parent.remove();
 
 		cmb.triggerElement( $table, { type: 'cmb2_remove_row', group: true } );
-
 	};
 
 	cmb.removeAjaxRow = function( evt ) {
@@ -744,19 +768,22 @@ window.CMB2 = window.CMB2 || {};
 	};
 
 	cmb.resetRow = function( $addNewBtn, $removeBtn ) {
+		cmb.resetRow.resetting = true;
 		// Click the "add new" button followed by the "remove this" button
 		// in order to reset the repeat row to empty values.
 		$addNewBtn.trigger( 'click' );
 		$removeBtn.trigger( 'click' );
+		cmb.resetRow.resetting = false;
 	};
 
 	cmb.shiftRows = function( evt ) {
 
 		evt.preventDefault();
 
-		var $this = $( this );
-		var $from = $this.parents( '.cmb-repeatable-grouping' );
-		var $goto = $this.hasClass( 'move-up' ) ? $from.prev( '.cmb-repeatable-grouping' ) : $from.next( '.cmb-repeatable-grouping' );
+		var $this  = $( this );
+		var moveUp = $this.hasClass( 'move-up' ) ? true : false;
+		var $from  = $this.parents( '.cmb-repeatable-grouping' );
+		var $goto  = $from[ moveUp ? 'prev' : 'next' ]( '.cmb-repeatable-grouping' );
 
 		// Before shift occurs.
 		cmb.triggerElement( $this, 'cmb2_shift_rows_enter', $this, $from, $goto );
@@ -768,86 +795,31 @@ window.CMB2 = window.CMB2 || {};
 		// About to shift
 		cmb.triggerElement( $this, 'cmb2_shift_rows_start', $this, $from, $goto );
 
-		var inputVals = [];
-		// Loop this item's fields
-		$from.find( cmb.repeatEls ).each( function() {
-			var $element = $( this );
-			var elType = $element.attr( 'type' );
-			var val;
+		var fromIterator = $from.attr('data-iterator');
+		var toIterator   = $goto.attr('data-iterator');
 
-			if ( $element.hasClass('cmb2-media-status') ) {
-				// special case for image previews
-				val = $element.html();
-			} else if ( 'checkbox' === elType || 'radio' === elType ) {
-				val = $element.is(':checked');
-			} else if ( 'select' === $element.prop('tagName') ) {
-				val = $element.is(':selected');
-			} else {
-				val = $element.val();
-			}
-
-			// Get all the current values per element
-			inputVals.push( { val: val, $: $element } );
+		// Replace name attributes in both groups.
+		$from.attr( 'data-iterator', toIterator ).find( cmb.repeatEls ).each( function() {
+			cmb.updateNameAttr( $( this ), fromIterator, toIterator );
 		});
-		// And swap them all
-		$goto.find( cmb.repeatEls ).each( function( index ) {
-			var $element = $( this );
-			var elType = $element.attr( 'type' );
-			var val;
-
-			if ( $element.hasClass('cmb2-media-status') ) {
-				var toRowId = $element.closest('.cmb-repeatable-grouping').attr('data-iterator');
-				var fromRowId = inputVals[ index ].$.closest('.cmb-repeatable-grouping').attr('data-iterator');
-
-				// special case for image previews
-				val = $element.html();
-				$element.html( inputVals[ index ].val );
-				inputVals[ index ].$.html( val );
-
-				inputVals[ index ].$.find( 'input' ).each(function() {
-					var name = $( this ).attr( 'name' );
-					name = name.replace( '['+toRowId+']', '['+fromRowId+']' );
-					$( this ).attr( 'name', name );
-				});
-				$element.find('input').each(function() {
-					var name = $( this ).attr('name');
-					name = name.replace('['+fromRowId+']', '['+toRowId+']');
-					$( this ).attr('name', name);
-				});
-
-			}
-			// handle checkbox swapping
-			else if ( 'checkbox' === elType  ) {
-				inputVals[ index ].$.prop( 'checked', $element.is(':checked') );
-				$element.prop( 'checked', inputVals[ index ].val );
-			}
-			// handle radio swapping
-			else if ( 'radio' === elType  ) {
-				if ( $element.is( ':checked' ) ) {
-					inputVals[ index ].$.attr( 'data-checked', 'true' );
-				}
-				if ( inputVals[ index ].$.is( ':checked' ) ) {
-					$element.attr( 'data-checked', 'true' );
-				}
-			}
-			// handle select swapping
-			else if ( 'select' === $element.prop('tagName') ) {
-				inputVals[ index ].$.prop( 'selected', $element.is(':selected') );
-				$element.prop( 'selected', inputVals[ index ].val );
-			}
-			// handle normal input swapping
-			else {
-				inputVals[ index ].$.val( $element.val() );
-				$element.val( inputVals[ index ].val );
-			}
+		$goto.attr( 'data-iterator', fromIterator ).find( cmb.repeatEls ).each( function() {
+			cmb.updateNameAttr( $( this ), toIterator, fromIterator );
 		});
 
-		$from.find( 'input[data-checked=true]' ).prop( 'checked', true ).removeAttr( 'data-checked' );
-		$goto.find( 'input[data-checked=true]' ).prop( 'checked', true ).removeAttr( 'data-checked' );
+		// Replace titles in both groups.
+		var groupTitle = $this.parents( '.cmb-repeatable-group' ).find('[data-grouptitle]').data( 'grouptitle' );
+		if ( groupTitle ) {
+			cmb.resetGroupTitles( $from, toIterator, groupTitle );
+			cmb.resetGroupTitles( $goto, fromIterator, groupTitle );
+		}
 
-		// trigger color picker change event
-		$from.find( 'input[type="text"].cmb2-colorpicker' ).trigger( 'change' );
-		$goto.find( 'input[type="text"].cmb2-colorpicker' ).trigger( 'change' );
+		// Now move the group to it's destination.
+		$goto[moveUp ? 'before' : 'after']( $from );
+
+		// Scroll to the top of the shifted group.
+		$([document.documentElement, document.body]).animate({
+			scrollTop: $from.offset().top - 50
+		}, 300);
 
 		// shift done
 		cmb.triggerElement( $this, 'cmb2_shift_rows_complete', $this, $from, $goto );
@@ -946,7 +918,7 @@ window.CMB2 = window.CMB2 || {};
 		if ( ! $selector.length ) {
 			return;
 		}
-		if ( typeof jQuery.wp === 'object' && typeof jQuery.wp.wpColorPicker === 'function' ) {
+		if ( 'object' === typeof jQuery.wp && 'function' === typeof jQuery.wp.wpColorPicker ) {
 
 			$selector.each( function() {
 				var $this = $( this );
@@ -1004,13 +976,17 @@ window.CMB2 = window.CMB2 || {};
 		}
 	};
 
-	cmb.makeRepeatableSortable = function() {
-		var $repeatables = cmb.metabox().find( '.cmb-repeat-table .cmb-field-list' );
+	cmb.makeRepeatableSortable = function( $row ) {
+		var $repeatables = ($row || cmb.metabox()).find( '.cmb-repeat-table .cmb-field-list' );
 
 		if ( $repeatables.length ) {
 			$repeatables.sortable({
 				items : '.cmb-repeat-row',
-				cursor: 'move'
+				cursor: 'move',
+				// The default "cancel" attributes are: "input,textarea,button,select,option".
+				// We are appending .CodeMirror.
+				// See https://api.jqueryui.com/sortable/#option-cancel
+				cancel: 'input,textarea,button,select,option,.CodeMirror'
 			});
 		}
 	};
@@ -1299,7 +1275,7 @@ window.CMB2 = window.CMB2 || {};
 	 * @return {void}
 	 */
 	cmb.log = function() {
-		if ( l10n.script_debug && console && typeof console.log === 'function' ) {
+		if ( l10n.script_debug && console && 'function' === typeof console.log ) {
 			console.log.apply(console, arguments);
 		}
 	};

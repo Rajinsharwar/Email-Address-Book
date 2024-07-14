@@ -7,12 +7,46 @@ namespace Composer\Autoload;
 class ComposerStaticInit608ed03351f24243e009793f7afca7ec
 {
     public static $files = array (
-        'a2c48002d05f7782d8b603bd2bcb5252' => __DIR__ . '/..' . '/johnbillion/extended-cpts/extended-cpts.php',
+        'ac773ca18bc86f9208de2ed8068423eb' => __DIR__ . '/..' . '/johnbillion/extended-cpts/functions.php',
+    );
+
+    public static $prefixLengthsPsr4 = array (
+        'E' => 
+        array (
+            'ExtCPTs\\Tests\\' => 14,
+            'ExtCPTs\\' => 8,
+        ),
+        'A' => 
+        array (
+            'Args\\' => 5,
+        ),
+    );
+
+    public static $prefixDirsPsr4 = array (
+        'ExtCPTs\\Tests\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/johnbillion/extended-cpts/tests/integration',
+        ),
+        'ExtCPTs\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/johnbillion/extended-cpts/src',
+        ),
+        'Args\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/johnbillion/args/src',
+        ),
+    );
+
+    public static $classMap = array (
+        'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
     );
 
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
+            $loader->prefixLengthsPsr4 = ComposerStaticInit608ed03351f24243e009793f7afca7ec::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInit608ed03351f24243e009793f7afca7ec::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInit608ed03351f24243e009793f7afca7ec::$classMap;
 
         }, null, ClassLoader::class);
     }
