@@ -62,7 +62,7 @@ function ab_address_send_email_callback() {
                 <input type="text" name="email_subject" id="email_subject" class="regular-text">
             </p>
             <p>
-                <label for="email_body">Body:</label>
+                <label for="email_body">Body: (Use {{user_first_name}} to replace with user's First name.)</label>
                 <?php
                 // Initialize wp_editor
                 $settings = array(
@@ -128,17 +128,22 @@ function ab_send_email_ajax_callback() {
         $email_subject = sanitize_text_field($_POST['email_subject']);
         $email_body = wp_kses_post(stripslashes_deep($_POST['email_body']));
 
-        $email_body = get_email_message_html( $email_body );
+		$email_body = get_email_message_html( $email_body );
 
-        if (!empty($email_subject) && !empty($email_body)) {
-            foreach ($details as $detail) {
+		// Set email headers
+		$headers = array('Content-Type: text/html; charset=UTF-8');
+
+        if ( ! empty( $email_subject ) && ! empty( $email_body ) ) {
+            foreach ( $details as $detail ) {
                 $user_email = $detail['email'];
 
-                // Set email headers
-                $headers = array('Content-Type: text/html; charset=UTF-8');
+				$user_first_name = $detail['first_name'];
+
+				// Replace with First Names.
+				$email_body_updated = str_replace( '{{user_first_name}}', esc_html( $user_first_name ), $email_body );
 
                 // Send email with headers
-                wp_mail($user_email, $email_subject, $email_body, $headers);
+                wp_mail($user_email, $email_subject, $email_body_updated, $headers);
             }
             echo '<div class="updated"><p>🚀🚀🚀 Email(s) sent successfully!</p></div>';
         } else {
