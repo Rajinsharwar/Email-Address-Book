@@ -1,12 +1,11 @@
 <?php
 /**
- * Plugin Name: Address Book
- * Plugin URI: https://github.com/jazzsequence/Address-Book
- * Description: A WordPress plugin for storing and maintaining addresses.
- * Author: Chris Reynolds
- * Author URI: https://chrisreynolds.io
+ * Plugin Name: Email Address Book
+ * Plugin URI: https://github.com/Rajinsharwar/Email-Address-Book
+ * Description: A WordPress plugin for storing and maintaining email address and sending bulk emails from WP, just like an Email service.
+ * Author: Rajin Sharwar
  * License: GPLv3
- * Version: 0.3.3
+ * Version: 1
  *
  * @package AddressBook
  */
