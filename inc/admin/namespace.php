@@ -44,10 +44,12 @@ function ab_address_send_email_callback() {
                 <?php
                 // Initialize wp_editor
                 $settings = array(
-                    'textarea_name' => 'email_body',
-                    'textarea_rows' => 10,
-                    'editor_class'  => 'large-text',
-                    'teeny'         => true,
+                    'textarea_name'       => 'email_body',
+                    'textarea_rows'       => 10,
+                    'editor_class'        => 'large-text',
+                    'teeny'               => true,
+					'remove_trailing_brs' => false,
+					"wpautop"             => false,
                 );
                 wp_editor('', 'email_body', $settings);
                 ?>
@@ -137,9 +139,14 @@ function get_email_message_html( $content ) {
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<meta http-equiv="X-UA-Compatible" content="IE=edge">
 		<meta name="viewport" content="width=device-width">
-		<title>WP Mail SMTP Test Email</title>
 	</head>
-	<?php echo nl2br( $content ); ?>
+	<table>
+		<tr class="ab_address-email-body">
+			<td>
+				<?php echo wp_kses_post( stripslashes_deep( $content ) ); ?>
+			</td>
+		</tr>
+	</table>
 	</html>
 
 	<?php
