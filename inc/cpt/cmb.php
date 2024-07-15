@@ -23,10 +23,57 @@ function address_meta() {
 	] );
 
 	$cmb->add_field( [
+		'name'       => __( 'First Name', 'address-book' ),
+		'id'         => $prefix . 'first_name',
+		'type'       => 'text',
+		'attributes' => array(
+            'required'    => 'required',
+        ),
+	] );
+
+	$cmb->add_field( [
+		'name'       => __( 'Last Name', 'address-book' ),
+		'id'         => $prefix . 'last_name',
+		'type'       => 'text',
+		'attributes' => array(
+            'required'    => 'required',
+        ),
+	] );
+
+	$cmb->add_field( [
 		'name'       => __( 'Email Address', 'address-book' ),
 		'id'         => $prefix . 'email',
 		'type'       => 'text_email',
+		'attributes' => array(
+            'required'    => 'required',
+        ),
 	] );
+
+	$cmb->add_field( [
+		'name'       => __( 'Is Active', 'address-book' ),
+		'id'         => $prefix . 'is_active',
+		'type'       => 'checkbox',
+	] );
+}
+
+function set_custom_edit_book_columns($columns) {
+    $columns['status'] = __( 'Status', 'ab_address' );
+
+    return $columns;
+}
+
+function custom_book_column( $column, $post_id ) {
+    switch ( $column ) {
+
+        case 'status' :
+            $status = get_post_meta( $post_id , '_ab_is_active' , '' , ',' , '' );
+
+			if ( ! empty( $status ) ) {
+				echo '✅';
+			} else {
+				echo '❌';
+			}
+    }
 }
 
 /**

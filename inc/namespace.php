@@ -15,30 +15,22 @@ use AddressBook\CMB2;
  * Registers actions and filter required to run the plugin.
  */
 function bootstrap() {
-	spl_autoload_register( __NAMESPACE__ . '\\autoload' );
 
 	add_action( 'save_post', __NAMESPACE__ . '\\flush_cached_addresses' );
 	add_action( 'init', __NAMESPACE__ . '\\CPT\\register_address' );
 	add_action( 'cmb2_init', __NAMESPACE__ . '\\CMB2\\address_meta' );
-}
 
-/**
- * Autoload classes for this namespace.
- *
- * @param string $class Class name.
- */
-function autoload( $class ) {
-	if ( strpos( $class, __NAMESPACE__ . '\\' ) !== 0 ) {
-		return;
-	}
+	add_action( 'admin_menu', __NAMESPACE__ . '\\Admin\\add_menus' );
+	add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\\Admin\\disable_auto_draft_cpt' );
+	add_action('save_post', __NAMESPACE__ . '\\Admin\\flush_email_cache_on_address_save');
 
-	$relative = strtolower( substr( $class, strlen( __NAMESPACE__ . '\\' ) ) );
-	$parts = explode( '\\', $relative );
-	$final = array_pop( $parts );
-	array_push( $parts, 'class-' . $final . '.php' );
-	$path = __DIR__ . '/' . implode( '/', $parts );
+	add_action( 'manage_ab_address_posts_custom_column' , __NAMESPACE__ . '\\CMB2\\custom_book_column', 10, 2 );
+	add_filter( 'manage_ab_address_posts_columns', __NAMESPACE__ . '\\CMB2\\set_custom_edit_book_columns' );
 
-	require $path;
+	add_action('admin_enqueue_scripts', __NAMESPACE__ . '\\load_custom_admin_script');
+
+	add_action('wp_ajax_ab_send_email', __NAMESPACE__ . '\\Admin\\ab_send_email_ajax_callback');
+	add_action('wp_ajax_nopriv_ab_send_email', __NAMESPACE__ . '\\Admin\\ab_send_email_ajax_callback');
 }
 
 /**
@@ -125,4 +117,13 @@ function flush_cached_addresses( $post_id ) {
 	}
 
 	wp_cache_delete( 'full_address_list', 'address_book' );
+}
+
+function load_custom_admin_script() {
+	wp_enqueue_script('ab_address_admin_script', plugin_dir_url( __FILE__ ) . 'assets/js/admin-email-sending-script.js', array('jquery'), '1.0', true);
+
+    // Pass the AJAX URL to the script
+    wp_localize_script('ab_address_admin_script', 'ab_address_ajax', array(
+        'ajaxurl' => admin_url('admin-ajax.php')
+    ));
 }
