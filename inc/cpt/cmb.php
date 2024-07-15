@@ -35,9 +35,6 @@ function address_meta() {
 		'name'       => __( 'Last Name', 'address-book' ),
 		'id'         => $prefix . 'last_name',
 		'type'       => 'text',
-		'attributes' => array(
-            'required'    => 'required',
-        ),
 	] );
 
 	$cmb->add_field( [

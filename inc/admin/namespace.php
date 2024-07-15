@@ -8,6 +8,18 @@
 namespace AddressBook\Admin;
 use AddressBook\CMB2;
 
+add_action('init', __NAMESPACE__ . '\\handle_emails_disable_enable');
+
+function handle_emails_disable_enable() {
+    if (isset($_POST['action']) && $_POST['action'] === 'enable_all_emails') {
+        enable_all_emails();
+    }
+
+	if (isset($_POST['action']) && $_POST['action'] === 'disable_all_emails') {
+        disable_all_emails();
+    }
+}
+
 /**
  * Adds the admin menus.
  *
@@ -31,6 +43,16 @@ function ab_address_send_email_callback() {
     ?>
     <div class="wrap">
         <h1>Send Bulk Email</h1>
+		<form method="post">
+			<input type="hidden" name="action" value="disable_all_emails">
+			<button type="submit">Disable all emails</button>
+		</form>
+
+		<form method="post">
+			<input type="hidden" name="action" value="enable_all_emails">
+			<button type="submit">Enable all Emails</button>
+		</form>
+
         <form id="ab-email-form" method="post" action="">
             <h3> Sending to total: <?php echo esc_html($total_users); ?> </h3>
             <hr>
@@ -245,4 +267,29 @@ function flush_email_cache_on_address_save( $post_id ) {
         return;
     }
     wp_cache_delete( 'ab_address_emails_cache' );
+}
+
+function enable_all_emails() {
+	global $wpdb;
+
+	$sql = "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_ab_email'";
+
+	$results = $wpdb->get_results($sql, ARRAY_A);
+
+	$post_ids = array();
+	foreach ( $results as $result ) {
+		$post_ids[] = $result['post_id'];
+	}
+
+	foreach ( $post_ids as $post_id ) {
+		add_post_meta( $post_id, '_ab_is_active', 'on' );
+	}
+}
+
+function disable_all_emails() {
+	global $wpdb;
+
+	$sql = "DELETE FROM $wpdb->postmeta WHERE meta_key = '_ab_is_active' AND `meta_value` = 'on';";
+
+	$wpdb->get_results($sql);
 }
