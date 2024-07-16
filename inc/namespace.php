@@ -31,6 +31,11 @@ function bootstrap() {
 
 	add_action('wp_ajax_ab_send_email', __NAMESPACE__ . '\\Admin\\ab_send_email_ajax_callback');
 	add_action('wp_ajax_nopriv_ab_send_email', __NAMESPACE__ . '\\Admin\\ab_send_email_ajax_callback');
+
+	add_action( 'admin_footer', __NAMESPACE__ . '\\Admin\\export_csv_admin_button' );
+	add_action( 'admin_footer', __NAMESPACE__ . '\\Admin\\import_csv_admin_button' );
+
+	add_action( 'update_post_meta', __NAMESPACE__ . '\\Admin\\save_ab_address', 10, 4 );
 }
 
 /**
@@ -119,6 +124,9 @@ function flush_cached_addresses( $post_id ) {
 	wp_cache_delete( 'full_address_list', 'address_book' );
 }
 
+/**
+ * Enqueue Admin JS file.
+ */
 function load_custom_admin_script() {
 	wp_enqueue_script('ab_address_admin_script', plugin_dir_url( __FILE__ ) . 'assets/js/admin-email-sending-script.js', array('jquery'), '1.0', true);
 

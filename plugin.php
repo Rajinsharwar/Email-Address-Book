@@ -5,7 +5,7 @@
  * Description: A WordPress plugin for storing and maintaining email address and sending bulk emails from WP, just like an Email service.
  * Author: Rajin Sharwar
  * License: GPLv3
- * Version: 1
+ * Version: 1.0
  *
  * @package AddressBook
  */
